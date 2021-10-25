@@ -1,0 +1,33 @@
+service: sls-cdk
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+provider:
+  name: aws
+  region: eu-north-1
+  runtime: nodejs14.x
+  iam: # Set up IAM permission for sending messages to the queue
+    role:
+      statements:
+        - Effect: Allow
+          Action: sqs:SendMessage
+          Resource: ${cf:InfrastructureStack.queueArn}
+
+functions:
+  createTodo:
+    handler: src/createTodo.handler
+    events:
+      - http:
+          path: /todos
+          method: post
+    environment: # Set environment variable with the queue URL
+      QUEUE_URL: ${cf:InfrastructureStack.queueUrl}
+  queueProcessor:
+    handler: src/queueProcessor.handler
+    events:
+      - sqs:
+          arn: ${cf:InfrastructureStack.queueArn}
